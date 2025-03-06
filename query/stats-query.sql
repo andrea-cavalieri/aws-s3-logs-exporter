@@ -65,6 +65,19 @@ WHERE rn = 1
 ORDER BY max_daily_username_count DESC;
 
 
+-- RPM - Query to get the maximum endpoint count per minute per tenant
+SELECT Tenant, Timestamp_m, endpoint_count AS max_endpoint_count
+FROM (
+    SELECT
+         Tenant,
+         Timestamp_m,
+         COUNT(Endpoint) AS endpoint_count,
+         ROW_NUMBER() OVER (PARTITION BY Tenant ORDER BY COUNT(Endpoint) DESC) AS rn
+    FROM tsv8logs
+    GROUP BY Tenant, Timestamp_m
+) sub
+WHERE rn = 1 ORDER BY max_endpoint_count DESC;
+
 
 -- RPS - Query to get the maximum endpoint count per second per tenant
 SELECT Tenant, Timestamp_s, endpoint_count AS max_endpoint_count
@@ -76,21 +89,6 @@ FROM (
          ROW_NUMBER() OVER (PARTITION BY Tenant ORDER BY COUNT(Endpoint) DESC) AS rn
     FROM tsv8logs
     GROUP BY Tenant, Timestamp_s
-) sub
-WHERE rn = 1 ORDER BY max_endpoint_count DESC;
-
-
-
--- RPM - Query to get the maximum endpoint count per minute per tenant
-SELECT Tenant, Timestamp_m, endpoint_count AS max_endpoint_count
-FROM (
-    SELECT
-         Tenant,
-         Timestamp_m,
-         COUNT(Endpoint) AS endpoint_count,
-         ROW_NUMBER() OVER (PARTITION BY Tenant ORDER BY COUNT(Endpoint) DESC) AS rn
-    FROM tsv8logs
-    GROUP BY Tenant, Timestamp_m
 ) sub
 WHERE rn = 1 ORDER BY max_endpoint_count DESC;
 
