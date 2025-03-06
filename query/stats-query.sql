@@ -106,3 +106,7 @@ FROM (
 ) sub
 WHERE rn = 1 ORDER BY max_endpoint_count DESC;
 
+
+-- duration - Query to get the average duration per endpoint per tenant - TSV9 - heraeus
+ select uri, avg(duration) from  s3('https://tsv9-monitoring-bucket.s3.eu-north-1.amazonaws.com/tenant%3Dheraeus/**') 
+ group by uri order by avg(duration) desc
