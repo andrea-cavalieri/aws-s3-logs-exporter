@@ -1,4 +1,4 @@
--- Query to get the maximum daily unique usernames per tenant
+-- UPD - Query to get the maximum unique usernames per day per tenant
 WITH daily_counts AS (
     SELECT 
         Tenant,
@@ -7,22 +7,18 @@ WITH daily_counts AS (
     FROM tsv8logs
     GROUP BY Tenant, Timestamp_d
 ),
-max_daily AS (
+ranked AS (
     SELECT 
-        Tenant, 
-        max(daily_username_count) AS max_daily_username_count
+        Tenant,
+        Timestamp_d,
+        daily_username_count,
+        ROW_NUMBER() OVER (PARTITION BY Tenant ORDER BY daily_username_count DESC, Timestamp_d ASC) AS rn
     FROM daily_counts
-    GROUP BY Tenant
 )
-SELECT 
-    d.Tenant, 
-    d.Timestamp_d, 
-    d.daily_username_count AS max_daily_username_count
-FROM daily_counts d
-JOIN max_daily m
-  ON d.Tenant = m.Tenant
- AND d.daily_username_count = m.max_daily_username_count
- ORDER BY max_daily_username_count DESC;
+SELECT Tenant, Timestamp_d, daily_username_count AS max_daily_username_count
+FROM ranked
+WHERE rn = 1
+ORDER BY max_daily_username_count DESC;
 
 
 -- UPM - Query to get the average unique usernames per day per tenant
