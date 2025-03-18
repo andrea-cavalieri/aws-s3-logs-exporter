@@ -111,5 +111,59 @@ select Tenant, Endpoint, CAST(avg(Duration)/1000 AS INTEGER) as duration from ts
 select Tenant, Endpoint, CAST(max(Duration)/1000 AS INTEGER) as duration from tsv8logs group by Tenant,Endpoint order by  duration desc LIMIT 30
 
 -- duration - Query to get the average duration per endpoint per tenant - TSV9 - heraeus
- select uri, avg(duration) from  s3('https://tsv9-monitoring-bucket.s3.eu-north-1.amazonaws.com/tenant%3Dheraeus/**') 
- group by uri order by avg(duration) desc
+ select uri, avg(duration) from  s3('https://tsv9-monitoring-bucket.s3.eu-north-1.amazonaws.com/tenant=heraeus/**')
+ group by uri order by avg(duration) desc 
+
+-- TSV9
+
+select tenant, uri, CAST(avg(duration)/1000 AS INTEGER) as duration 
+from s3('https://tsv9-monitoring-bucket.s3.eu-north-1.amazonaws.com/tenant=*/**') 
+group by tenant,uri order by  duration desc LIMIT 40
+
+-- duration - Query to get the maximum duration per endpoint per tenant - TSV9 - heraeus
+select uri, cast(avg(duration)/1000 as integer) as duration_s from  s3('https://tsv9-monitoring-bucket.s3.eu-north-1.amazonaws.com/tenant=heraeus/**')
+ group by uri order by avg(duration) desc limit 20
+
+
+WITH daily_duration_counts AS (
+    SELECT
+         tenant,
+         toDate(timestamp) AS day,
+         AVG(duration) AS avg_duration
+    FROM s3('https://tsv9-monitoring-bucket.s3.eu-north-1.amazonaws.com/tenant=*/**')
+    GROUP BY tenant, day
+)
+SELECT
+    tenant,
+    CAST(AVG(avg_duration) AS Int32) AS avg_duration_per_day
+FROM daily_duration_counts
+
+-- username - Query to get the average unique usernames per day per tenant - TSV9
+  SELECT
+         tenant,
+         toDate(timestamp) AS day,
+         COUNT(DISTINCT username) AS username_count
+    FROM s3('https://tsv9-monitoring-bucket.s3.eu-north-1.amazonaws.com/tenant=*/**')
+    GROUP BY tenant, day
+)
+SELECT
+    tenant,
+    CAST(AVG(username_count) AS Int32) AS avg_username_count_per_day
+FROM daily_username_counts
+GROUP BY tenant;
+
+
+-- username - Query to get the maximum unique usernames per hour per tenant - TSV9
+WITH hourly_username_counts AS (
+    SELECT
+         tenant,
+         toStartOfHour(toDateTime(timestamp)) AS hour,
+         COUNT(DISTINCT username) AS username_count
+    FROM s3('https://tsv9-monitoring-bucket.s3.eu-north-1.amazonaws.com/tenant=*/**')
+    GROUP BY tenant, hour
+)
+SELECT
+    tenant,
+    CAST(MAX(username_count) AS Int32) AS max_username_count_per_hour
+FROM hourly_username_counts
+GROUP BY tenant;
