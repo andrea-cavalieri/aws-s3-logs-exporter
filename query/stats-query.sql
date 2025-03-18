@@ -32,18 +32,19 @@ WITH daily_username_counts AS (
 )
 SELECT 
     Tenant,
-    AVG(username_count) AS avg_username_count_per_day
+    CAST(AVG(username_count) AS INTEGER) AS avg_username_count_per_day
 FROM daily_username_counts
 GROUP BY Tenant;
 
 
 
+
 -- UPH - Query to get the maximum unique usernames per hour per tenant
-WITH daily_counts AS (
+WITH hourly_counts AS (
     SELECT 
         Tenant,
         Timestamp_h,
-        COUNT(DISTINCT Username) AS daily_username_count
+        COUNT(DISTINCT Username) AS hour_username_count
     FROM tsv8logs
     GROUP BY Tenant, Timestamp_h
 ),
@@ -51,14 +52,14 @@ ranked AS (
     SELECT 
         Tenant,
         Timestamp_h,
-        daily_username_count,
-        ROW_NUMBER() OVER (PARTITION BY Tenant ORDER BY daily_username_count DESC, Timestamp_h ASC) AS rn
-    FROM daily_counts
+        hour_username_count,
+        ROW_NUMBER() OVER (PARTITION BY Tenant ORDER BY hour_username_count DESC, Timestamp_h ASC) AS rn
+    FROM hourly_counts
 )
-SELECT Tenant, Timestamp_h, daily_username_count AS max_daily_username_count
+SELECT Tenant, Timestamp_h, hour_username_count AS max_hour_username_count
 FROM ranked
 WHERE rn = 1
-ORDER BY max_daily_username_count DESC;
+ORDER BY max_hour_username_count DESC;
 
 
 -- RPM - Query to get the maximum endpoint count per minute per tenant
@@ -102,6 +103,12 @@ FROM (
 ) sub
 WHERE rn = 1 ORDER BY max_endpoint_count DESC;
 
+
+-- duration - Query to get the average duration per endpoint per tenant
+select Tenant, Endpoint, CAST(avg(Duration)/1000 AS INTEGER) as duration from tsv8logs group by Tenant,Endpoint order by  duration desc LIMIT 40
+
+-- duration - Query to get the maximum duration per endpoint per tenant 
+select Tenant, Endpoint, CAST(max(Duration)/1000 AS INTEGER) as duration from tsv8logs group by Tenant,Endpoint order by  duration desc LIMIT 30
 
 -- duration - Query to get the average duration per endpoint per tenant - TSV9 - heraeus
  select uri, avg(duration) from  s3('https://tsv9-monitoring-bucket.s3.eu-north-1.amazonaws.com/tenant%3Dheraeus/**') 
